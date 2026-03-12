@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Bull Contracts — Lawyer Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      background: #f5f5f3;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── subtle network background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, #c8c8c4 1px, transparent 1px);
+      background-size: 36px 36px;
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── header ── */
+    .header {
+      position: relative;
+      z-index: 10;
+      background: #ffffff;
+      border-bottom: 1px solid #e4e4e0;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-brand .logo-mark {
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid #1a1a1a;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .header-brand .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .header-brand .brand-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .header-brand .brand-sub {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .user-badge {
+      font-size: 12px;
+      font-weight: 400;
+      color: #666;
+      letter-spacing: 0.03em;
+      border: 1px solid #e4e4e0;
+      padding: 5px 14px;
+      border-radius: 20px;
+      display: none;
+      background: #fafaf8;
+    }
+
+    /* ── layout ── */
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    /* ── login screen ── */
+    #login-screen {
+      position: relative;
+      z-index: 10;
+      max-width: 380px;
+      margin: 80px auto;
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 10px;
+      padding: 36px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+    }
+
+    #login-screen h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    #login-screen p {
+      color: #888;
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%;
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 6px;
+      padding: 10px 13px;
+      color: #1a1a1a;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      transition: border-color 0.15s;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: #1a1a1a;
+      background: #fff;
+    }
+
+    button {
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 11px 20px;
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    button:hover { background: #333; }
+    button:disabled { background: #ccc; color: #999; cursor: not-allowed; }
+
+    .status-msg {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+
+    /* ── sections ── */
+    .section {
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 10px;
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #aaa;
+    }
+    .section h2 {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+    }
+
+    /* ── drop zone ── */
+    #drop-zone {
+      border: 1.5px dashed #d4d4d0;
+      border-radius: 8px;
+      padding: 44px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: #1a1a1a;
+      background: #fafaf8;
+    }
+    #drop-zone .icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    #drop-zone p {
+      color: #888;
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    #analyze-btn { margin-top: 18px; display: none; }
+
+    #contract-preview {
+      margin-top: 14px;
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #888;
+      max-height: 100px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    /* ── spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 1.5px solid #e0e0e0;
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── card grid ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .card .card-title {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .card .card-meta {
+      font-size: 11px;
+      font-weight: 300;
+      color: #888;
+      line-height: 1.8;
+    }
+    .card .amount {
+      font-size: 24px;
+      font-weight: 300;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      margin: 10px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-top: 10px;
+    }
+    .badge.pending   { background: #f5f0e4; color: #9a7830; border: 1px solid #e8dfc4; }
+    .badge.confirmed { background: #e8f4ec; color: #2d7a4a; border: 1px solid #c8e4d0; }
+    .badge.signed    { background: #eeeef8; color: #4a4a9a; border: 1px solid #d4d4ec; }
+
+    /* ── share box ── */
+    .share-box {
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .share-box code {
+      flex: 1;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: #555;
+      word-break: break-all;
+    }
+    .copy-btn {
+      width: auto;
+      font-size: 11px;
+      padding: 8px 16px;
+      background: #1a1a1a;
+    }
+
+    .section p[style*="color:#94a3b8"],
+    .section p[style*="color:#4ade80"] {
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    #dashboard { display: none; }
+
+    /*
+      ── CONFIRMATION INBOX STYLES ──────────────────────────────────
+
+      Each incoming confirmation from a party shows up as a
+      "confirmation row" — like a notification card.
+
+      It has:
+        - Who submitted it and what item it's for
+        - A "Countersign & Seal" button for the lawyer to act on
+        - After sealing: it turns green and shows "Sealed"
+
+      The .conf-row is a flex container:
+        left side = text info
+        right side = button or sealed badge
+    */
+
+    .conf-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0;
+      border-top: 1px solid #f0f0ec;
+    }
+    .conf-row:first-child { border-top: none; padding-top: 0; }
+
+    .conf-info { flex: 1; }
+    .conf-info .conf-who {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+    .conf-info .conf-what {
+      font-size: 11px;
+      font-weight: 300;
+      color: #888;
+    }
+    .conf-info .conf-time {
+      font-size: 10px;
+      color: #bbb;
+      margin-top: 2px;
+    }
+
+    /*
+      The countersign button is deliberately small and dark —
+      it's an action button, not a primary CTA.
+      width: auto overrides the global button { width: 100% }
+    */
+    .btn-seal {
+      width: auto;
+      font-size: 11px;
+      padding: 8px 16px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Green "Sealed" badge — appears after lawyer countersigns */
+    .sealed-badge {
+      font-size: 10px;
+      font-weight: 500;
+      color: #2d7a4a;
+      background: #e8f4ec;
+      border: 1px solid #c8e4d0;
+      padding: 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Empty state — shown when no confirmations have arrived yet */
+    .conf-empty {
+      font-size: 12px;
+      font-weight: 300;
+      color: #bbb;
+      padding: 8px 0;
+    }
+
+    /*
+      A pulsing green dot to show "this section is live".
+      CSS animation: it breathes in and out every 2 seconds.
+      No JavaScript needed — pure CSS.
+    */
+    .live-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2d7a4a;
+      margin-left: 8px;
+      animation: pulse 2s ease-in-out infinite;
+      vertical-align: middle;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="logo-mark">⚖</div>
+    <div class="brand-text">
+      <span class="brand-name">The Bull Contracts</span>
+      <span class="brand-sub">Lawyer Dashboard</span>
+    </div>
+  </div>
+  <div class="user-badge" id="user-badge">Loading...</div>
+</div>
+
+<div id="login-screen">
+  <h2>Lawyer Login</h2>
+  <p>Your password generates your cryptographic identity. Keep it safe — it cannot be recovered.</p>
+
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="username" placeholder="e.g. lawyer_mark" />
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Strong password" />
+  </div>
+
+  <button id="login-btn" onclick="login()">Login / Create Account</button>
+  <div class="status-msg" id="login-status"></div>
+</div>
+
+<div class="container" id="dashboard">
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-label">Step 01</span>
+      <h2>Upload Contract</h2>
+    </div>
+
+    <div id="drop-zone"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave(event)"
+         ondrop="onDrop(event)"
+         onclick="document.getElementById('file-input').click()">
+      <div class="icon">📄</div>
+      <p>Drag & drop a .txt or .md contract here<br/>or click to browse</p>
+    </div>
+
+    <input type="file" id="file-input" accept=".txt,.md" style="display:none"
+           onchange="onFileSelected(event)" />
+
+    <pre id="contract-preview"></pre>
+
+    <button id="analyze-btn" onclick="analyzeContract()">
+      Analyze with Claude AI
+    </button>
+  </div>
+
+  <div class="section" id="results-section" style="display:none">
+    <div class="section-header">
+      <span class="section-label">Step 02</span>
+      <h2>Contract Analysis</h2>
+    </div>
+    <p id="contract-summary" style="color:#888; font-size:12px; font-weight:300; line-height:1.7; margin-bottom:24px;"></p>
+
+    <h3 style="font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin-bottom:14px;">Payment Schedule</h3>
+    <div class="card-grid" id="payment-cards"></div>
+
+    <h3 style="font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:24px 0 14px;">Terms to Verify</h3>
+    <div class="card-grid" id="terms-cards"></div>
+
+    <button id="publish-btn" onclick="publishToGun()" style="margin-top:24px;">
+      Sign &amp; Publish to Network
+    </button>
+  </div>
+
+  <div class="section" id="share-section" style="display:none">
+    <div class="section-header">
+      <span class="section-label">Step 03</span>
+      <h2>Share with Parties</h2>
+    </div>
+    <p style="color:#888; font-size:12px; font-weight:300; line-height:1.6; margin-bottom:18px;">
+      Send this link to the parties. They will see the contract dashboard and can submit confirmations.
+    </p>
+    <div class="share-box">
+      <code id="share-link"></code>
+      <button class="copy-btn" onclick="copyLink()">Copy</button>
+    </div>
+    <p style="color:#2d7a4a; font-size:12px; font-weight:300; margin-top:14px;" id="publish-status"></p>
+  </div>
+
+  <!--
+    STEP 4: CONFIRMATION INBOX
+    ══════════════════════════════════════════════════════════════════
+
+    This section is hidden at first (display:none).
+    It appears automatically as soon as the first party confirmation
+    arrives — we show it in the listenForConfirmations() function below.
+
+    WHY is it separate from the card grid above?
+    Because the card grid (Step 2) shows the STRUCTURE of the contract
+    (what needs to happen). This inbox shows the ACTIVITY — who did
+    what and when. Separation of concerns.
+  -->
+  <div class="section" id="confirmations-section" style="display:none">
+    <div class="section-header">
+      <span class="section-label">Live</span>
+      <!--
+        The <span class="live-dot"> is purely visual — a breathing
+        green dot that tells the lawyer "this updates automatically".
+      -->
+      <h2>Party Confirmations <span class="live-dot"></span></h2>
+    </div>
+    <p style="color:#aaa; font-size:11px; font-weight:300; letter-spacing:0.03em; margin-bottom:20px;">
+      Each confirmation below is signed by the party's private key.
+      Click "Countersign & Seal" to add your signature — this locks the record.
+    </p>
+
+    <!--
+      This div is the container for incoming confirmation rows.
+      JavaScript will inject <div class="conf-row"> elements here
+      every time a party submits something.
+    -->
+    <div id="conf-list">
+      <p class="conf-empty">Waiting for party confirmations...</p>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+// No remote relay — Gun runs in localStorage-only mode.
+//
+// WHY is this fine for local testing?
+// Gun stores data in the browser's localStorage AND syncs to any peers it
+// can find. If you pass relay URLs, it tries to find other browsers via the
+// internet. If you pass nothing, it still works — it just syncs between
+// tabs in the same browser via localStorage (they share the same storage).
+//
+// For local testing: open lawyer.html and party.html as two tabs in the
+// same browser window. They share localStorage, so Gun syncs instantly.
+//
+// When you're ready for two different computers to sync, we'll add a relay
+// (Block 5 territory — or a simple local Node.js relay server).
+const gun = Gun();
+const GUN_USER = gun.user();
+
+let contractText = '';
+let analysisData = null;
+let contractId   = null;
+
+function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const statusEl = document.getElementById('login-status');
+
+  if (!username || !password) {
+    statusEl.textContent = 'Please enter username and password.';
+    return;
+  }
+
+  statusEl.innerHTML = '<span class="spinner"></span> Connecting...';
+  document.getElementById('login-btn').disabled = true;
+
+  GUN_USER.auth(username, password, (ack) => {
+    if (ack.err) {
+      GUN_USER.create(username, password, (ack2) => {
+        if (ack2.err) {
+          statusEl.textContent = 'Error: ' + ack2.err;
+          document.getElementById('login-btn').disabled = false;
+        } else {
+          GUN_USER.auth(username, password, (ack3) => {
+            if (ack3.err) {
+              statusEl.textContent = 'Error: ' + ack3.err;
+              document.getElementById('login-btn').disabled = false;
+            } else {
+              onLoggedIn(username);
+            }
+          });
+        }
+      });
+    } else {
+      onLoggedIn(username);
+    }
+  });
+}
+
+function onLoggedIn(username) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  const badge = document.getElementById('user-badge');
+  badge.textContent = username + ' · Lawyer';
+  badge.style.display = 'block';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (file) readFile(file);
+}
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    contractText = e.target.result;
+    const preview = document.getElementById('contract-preview');
+    preview.textContent = contractText.substring(0, 500) + (contractText.length > 500 ? '\n...' : '');
+    preview.style.display = 'block';
+    document.getElementById('analyze-btn').style.display = 'block';
+    document.getElementById('drop-zone').querySelector('p').textContent = '✓ ' + file.name + ' loaded';
+  };
+  reader.readAsText(file);
+}
+
+async function analyzeContract() {
+  const btn = document.getElementById('analyze-btn');
+  btn.innerHTML = '<span class="spinner"></span> Asking Claude...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('http://localhost:5000/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contract_text: contractText })
+    });
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error);
+
+    analysisData = result.data;
+    renderResults(analysisData);
+
+  } catch (err) {
+    btn.innerHTML = 'Error — is the backend running? ' + err.message;
+    btn.disabled = false;
+  }
+}
+
+function renderResults(data) {
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('contract-summary').textContent = data.contract_summary;
+
+  const payGrid = document.getElementById('payment-cards');
+  payGrid.innerHTML = '';
+  data.payment_schedule.forEach(p => {
+    payGrid.innerHTML += `
+      <div class="card" id="card-${p.id}">
+        <div class="card-title">${p.description}</div>
+        <div class="amount">$${p.amount.toLocaleString()}</div>
+        <div class="card-meta">
+          Due: ${p.due_when}<br/>
+          Paid by: <strong>${p.paid_by}</strong><br/>
+          Confirmed by: <strong>${p.confirmed_by}</strong>
+        </div>
+        <span class="badge pending" id="badge-${p.id}">Pending</span>
+      </div>`;
+  });
+
+  const termGrid = document.getElementById('terms-cards');
+  termGrid.innerHTML = '';
+  data.terms.forEach(t => {
+    termGrid.innerHTML += `
+      <div class="card" id="card-${t.id}">
+        <div class="card-title">${t.description}</div>
+        <div class="card-meta">
+          Deadline: ${t.deadline}<br/>
+          Responsible: <strong>${t.responsible_party}</strong><br/>
+          Verified by: <strong>${t.verified_by}</strong>
+        </div>
+        <span class="badge pending" id="badge-${t.id}">Pending</span>
+      </div>`;
+  });
+}
+
+async function publishToGun() {
+  if (!analysisData) return;
+
+  const btn = document.getElementById('publish-btn');
+  btn.innerHTML = '<span class="spinner"></span> Signing & publishing...';
+  btn.disabled = true;
+
+  contractId = 'contract-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+
+  const payload = {
+    contractId:    contractId,
+    analysis:      JSON.stringify(analysisData),
+    createdAt:     new Date().toISOString(),
+    lawyerPubKey:  GUN_USER.is.pub,
+    version:       '1.0'
+  };
+
+  GUN_USER.get('contracts').get(contractId).put(payload, (ack) => {
+    if (ack.err) {
+      btn.textContent = 'Error: ' + ack.err;
+      btn.disabled = false;
+      return;
+    }
+
+    gun.get('bull-contracts').get(contractId).put({ ...payload });
+    showShareLink();
+  });
+}
+
+function showShareLink() {
+  document.getElementById('share-section').style.display = 'block';
+
+  const partyUrl = window.location.origin +
+                   window.location.pathname.replace('lawyer.html', 'party.html') +
+                   '?contractId=' + contractId;
+
+  document.getElementById('share-link').textContent = partyUrl;
+  document.getElementById('publish-status').textContent =
+    '✓ Contract signed with your private key and published to the network.';
+
+  document.getElementById('publish-btn').innerHTML = '✓ Published';
+
+  // ── NEW: start listening for party confirmations ──────────────────
+  // We start the listener HERE, not on page load, because we only have
+  // a contractId AFTER publishing. Before that, there's nothing to listen to.
+  listenForConfirmations();
+}
+
+function copyLink() {
+  const link = document.getElementById('share-link').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  BLOCK 2 — LISTEN FOR PARTY CONFIRMATIONS
+//
+//  This function watches one specific path in Gun:
+//    bull-contracts/{contractId}/confirmations/
+//
+//  .map() means: "watch ALL children under this node"
+//  .on()  means: "call my function every time anything changes"
+//
+//  So if there are 5 items and a party confirms item 3,
+//  our callback fires once — just for item 3.
+//  If they then confirm item 5, it fires again — just for item 5.
+//
+//  Think of .map().on() as: "subscribe to every row in this table".
+// ══════════════════════════════════════════════════════════════════
+function listenForConfirmations() {
+  gun.get('bull-contracts').get(contractId).get('confirmations').map().on((data, itemId) => {
+
+    // data  = the confirmation object that was saved
+    // itemId = the key (e.g. "pay_1", "term_2")
+
+    // Gun calls this even when data is deleted or null — always guard:
+    if (!data || !data.data) return;
+
+    // Parse the confirmation JSON that the party signed
+    let conf;
+    try {
+      conf = JSON.parse(data.data);
+    } catch (e) {
+      return; // skip if malformed
+    }
+
+    // Show the confirmations section the first time something arrives
+    document.getElementById('confirmations-section').style.display = 'block';
+
+    // Remove the "Waiting..." placeholder if it's still there
+    const emptyMsg = document.querySelector('.conf-empty');
+    if (emptyMsg) emptyMsg.remove();
+
+    // ── Check if this item already has a row in the inbox ──────────
+    // Gun's .on() fires for EVERY change, including when WE write
+    // the lawyerSignature. Without this check, we'd add duplicate rows.
+    const existingRow = document.getElementById('conf-row-' + itemId);
+
+    if (existingRow) {
+      // Row already exists — just update it (e.g. after lawyer seals it)
+      updateConfRow(existingRow, conf, data);
+      return;
+    }
+
+    // ── Build a new confirmation row ────────────────────────────────
+    const row = document.createElement('div');
+    row.className = 'conf-row';
+    row.id = 'conf-row-' + itemId;
+
+    row.innerHTML = buildConfRowHTML(conf, data, itemId);
+    document.getElementById('conf-list').appendChild(row);
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  BUILD THE HTML FOR ONE CONFIRMATION ROW
+//
+//  We check: does this record already have a lawyerSignature?
+//  If YES → it's already sealed, show the green badge.
+//  If NO  → show the "Countersign & Seal" button.
+//
+//  WHY check lawyerSignature?
+//  Gun doesn't have a built-in "lock" feature.
+//  We enforce immutability by convention:
+//    - If lawyerSignature exists, the record is sealed.
+//    - countersign() will refuse to overwrite a sealed record.
+//    - The UI won't even show the button for sealed records.
+// ══════════════════════════════════════════════════════════════════
+function buildConfRowHTML(conf, data, itemId) {
+  const isSealed = !!data.lawyerSignature;  // !! converts to true/false
+
+  const rightSide = isSealed
+    ? `<span class="sealed-badge">✓ Sealed</span>`
+    : `<button class="btn-seal" onclick="countersign('${itemId}', this)">
+         Countersign &amp; Seal
+       </button>`;
+
+  return `
+    <div class="conf-info">
+      <div class="conf-who">${conf.submittedBy} — ${conf.type === 'payment' ? 'Payment' : 'Term'}</div>
+      <div class="conf-what">${conf.description}</div>
+      <div class="conf-time">${new Date(conf.timestamp).toLocaleString()}</div>
+    </div>
+    ${rightSide}
+  `;
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  UPDATE AN EXISTING ROW (called when Gun fires again for same item)
+//
+//  This handles the case where the lawyer just sealed an item —
+//  Gun's .on() fires again with the updated data (now with lawyerSignature).
+//  We rebuild the row's HTML so the button becomes the "Sealed" badge.
+// ══════════════════════════════════════════════════════════════════
+function updateConfRow(row, conf, data) {
+  row.innerHTML = buildConfRowHTML(conf, data, conf.itemId);
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  COUNTERSIGN & SEAL
+//
+//  When the lawyer clicks the button on a confirmation row:
+//
+//  1. We read the original confirmation data from Gun (to sign it)
+//  2. We call SEA.sign() with the LAWYER's private key
+//     → This produces a second signature, different from the party's
+//  3. We write lawyerSignature back to the same Gun node
+//  4. We also flip status to 'confirmed'
+//     → party.html's .on() listener picks this up instantly
+//
+//  WHY two signatures?
+//  Think of it like a notary. The party signs their own document.
+//  The notary (lawyer) countersigns to certify it's legitimate.
+//  Anyone can verify BOTH signatures independently.
+// ══════════════════════════════════════════════════════════════════
+async function countersign(itemId, btn) {
+  btn.innerHTML = '<span class="spinner"></span> Sealing...';
+  btn.disabled = true;
+
+  // Read the raw data from Gun one time — we need it to sign
+  gun.get('bull-contracts').get(contractId).get('confirmations').get(itemId).once(async (data) => {
+
+    if (!data || !data.data) {
+      btn.textContent = 'Error — no data found';
+      btn.disabled = false;
+      return;
+    }
+
+    // Guard: if already sealed, do nothing
+    // This prevents accidental double-sealing
+    if (data.lawyerSignature) {
+      btn.textContent = 'Already sealed';
+      return;
+    }
+
+    // Sign the party's original data with the LAWYER's private key
+    // GUN_USER._.sea is the lawyer's key pair object
+    // SEA.sign() produces a string that proves: "this lawyer saw and approved this"
+    const lawyerSig = await SEA.sign(data.data, GUN_USER._.sea);
+
+    // Now update the Gun node with:
+    //   lawyerSignature = our signature
+    //   status = 'confirmed' (party.html is watching for this!)
+    //
+    // Gun's .put() does a MERGE — it only overwrites the fields we list.
+    // The party's original data and partySignature are preserved.
+    gun.get('bull-contracts').get(contractId).get('confirmations').get(itemId).put({
+      lawyerSignature: lawyerSig,
+      lawyerPubKey:    GUN_USER.is.pub,
+      sealedAt:        new Date().toISOString(),
+      // Update the embedded data object's status too
+      data: JSON.stringify({ ...JSON.parse(data.data), status: 'confirmed' })
+    }, (ack) => {
+      if (ack.err) {
+        btn.textContent = 'Error: ' + ack.err;
+        btn.disabled = false;
+        return;
+      }
+      // The .on() listener above will automatically update the row UI
+      // We don't need to manually change the button here —
+      // Gun fires our callback, which calls updateConfRow()
+    });
+  });
+}
+</script>
+
+</body>
+</html>

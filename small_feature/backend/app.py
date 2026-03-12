@@ -19,18 +19,43 @@ import os
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 # Load the ANTHROPIC_API_KEY from the .env file
 load_dotenv()
 
+if not os.getenv("ANTHROPIC_API_KEY"):
+    print("\n⚠  ERROR: ANTHROPIC_API_KEY not found.")
+    print("   Create a .env file in the backend/ folder with:")
+    print("   ANTHROPIC_API_KEY=sk-ant-...\n")
+
 app = Flask(__name__)
 
-# CORS = Cross-Origin Resource Sharing
-# Browsers block JavaScript from calling a different server by default.
-# This tells Flask: "it's ok, let the browser on localhost call you."
+# CORS is no longer needed — Flask now serves the HTML files directly.
+# When the browser, the HTML page, and the API are all on the same
+# origin (localhost:5000), the browser doesn't apply CORS restrictions.
+# Same origin = same protocol + same host + same port.
 CORS(app)
+
+# ── SERVE FRONTEND FILES ──────────────────────────────────────────────────
+# This tells Flask: "if someone requests a .html file, look for it in
+# the ../frontend/ folder relative to this app.py file."
+#
+# os.path.dirname(__file__)  = the folder where app.py lives  (backend/)
+# os.path.join(..., '..', 'frontend') = one level up, then into frontend/
+#
+# So visiting http://localhost:5000/lawyer.html serves lawyer.html,
+# and http://localhost:5000/party.html serves party.html.
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+
+@app.route('/')
+def index():
+    return send_from_directory(FRONTEND_DIR, 'lawyer.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(FRONTEND_DIR, filename)
 
 client = Anthropic()
 
@@ -98,6 +123,16 @@ def analyze_contract():
     The browser sends:  { "contract_text": "..." }
     We return:          { "success": true, "data": { ...parsed contract... } }
     """
+    # Wrap everything in try/except so errors come back as readable JSON
+    # instead of a silent 500. Check the Flask terminal for the full traceback.
+    try:
+        return _do_analyze()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()   # prints full error to Flask terminal
+        return jsonify({"success": False, "error": str(e)}), 500
+
+def _do_analyze():
     body = request.get_json()
 
     if not body or "contract_text" not in body:
@@ -123,9 +158,12 @@ def analyze_contract():
     raw_text = message.content[0].text
 
     # Parse the JSON Claude returned
-    # If Claude added any extra text, json.loads will raise an error —
-    # that's why we told it in the prompt to return ONLY valid JSON.
-    parsed = json.loads(raw_text)
+    # If Claude added markdown fences (```json ... ```) strip them first
+    clean = raw_text.strip().strip('`')
+    if clean.startswith('json'):
+        clean = clean[4:]
+
+    parsed = json.loads(clean)
 
     return jsonify({"success": True, "data": parsed})
 

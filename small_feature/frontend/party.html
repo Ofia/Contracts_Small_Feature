@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Bull Contracts — Party Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      background: #f5f5f3;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, #c8c8c4 1px, transparent 1px);
+      background-size: 36px 36px;
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .header {
+      position: relative;
+      z-index: 10;
+      background: #ffffff;
+      border-bottom: 1px solid #e4e4e0;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-brand .logo-mark {
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid #1a1a1a;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+    .header-brand .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .header-brand .brand-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .header-brand .brand-sub {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .user-badge {
+      font-size: 12px;
+      font-weight: 400;
+      color: #666;
+      letter-spacing: 0.03em;
+      border: 1px solid #e4e4e0;
+      padding: 5px 14px;
+      border-radius: 20px;
+      display: none;
+      background: #fafaf8;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    #login-screen {
+      position: relative;
+      z-index: 10;
+      max-width: 380px;
+      margin: 80px auto;
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 10px;
+      padding: 36px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+    }
+    #login-screen h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    #login-screen p {
+      color: #888;
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%;
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 6px;
+      padding: 10px 13px;
+      color: #1a1a1a;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      transition: border-color 0.15s;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: #1a1a1a;
+      background: #fff;
+    }
+
+    button {
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 11px 20px;
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    button:hover { background: #333; }
+    button:disabled { background: #ccc; color: #999; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: transparent;
+      color: #555;
+      border: 1px solid #e4e4e0;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+    .btn-secondary:hover { background: #f5f5f3; border-color: #ccc; }
+
+    .status-msg {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+
+    .section {
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 10px;
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .section h2 {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2d7a4a;
+      animation: pulse 2s ease-in-out infinite;
+      margin-left: auto;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .card .card-title {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .card .card-meta {
+      font-size: 11px;
+      font-weight: 300;
+      color: #888;
+      line-height: 1.8;
+    }
+    .card .amount {
+      font-size: 24px;
+      font-weight: 300;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      margin: 10px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-top: 10px;
+    }
+    .badge.pending    { background: #f5f0e4; color: #9a7830; border: 1px solid #e8dfc4; }
+    .badge.submitted  { background: #eeeef8; color: #4a4a9a; border: 1px solid #d4d4ec; }
+    .badge.confirmed  { background: #e8f4ec; color: #2d7a4a; border: 1px solid #c8e4d0; }
+
+    .card-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+    .card-actions button { width: auto; font-size: 11px; padding: 8px 14px; }
+
+    /* ── confirmation log ── */
+    .log-entry {
+      border-top: 1px solid #f0f0ec;
+      padding: 14px 0;
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+    .log-entry:first-child { border-top: none; padding-top: 0; }
+    .log-entry .sig {
+      color: #bbb;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 10px;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 1.5px solid #e0e0e0;
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="logo-mark">⚖</div>
+    <div class="brand-text">
+      <span class="brand-name">The Bull Contracts</span>
+      <span class="brand-sub">Party Dashboard</span>
+    </div>
+  </div>
+  <div class="user-badge" id="user-badge">Loading...</div>
+</div>
+
+<div id="login-screen">
+  <h2>Party Login</h2>
+  <p>Log in with your credentials to access the shared contract dashboard.</p>
+
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="username" placeholder="e.g. bob_renter" />
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Your password" />
+  </div>
+
+  <button id="login-btn" onclick="login()">Login / Create Account</button>
+  <div class="status-msg" id="login-status"></div>
+</div>
+
+<div class="container" id="dashboard" style="display:none">
+
+  <div class="section" id="summary-section" style="display:none">
+    <div class="section-header">
+      <h2>Contract Overview</h2>
+      <div class="live-dot" title="Live — syncing with network"></div>
+    </div>
+    <p id="contract-summary" style="color:#888; font-size:12px; font-weight:300; line-height:1.7;"></p>
+  </div>
+
+  <div class="section" id="payments-section" style="display:none">
+    <div class="section-header">
+      <h2>Payment Schedule</h2>
+    </div>
+    <div class="card-grid" id="payment-cards"></div>
+  </div>
+
+  <div class="section" id="terms-section" style="display:none">
+    <div class="section-header">
+      <h2>Terms to Verify</h2>
+    </div>
+    <div class="card-grid" id="terms-cards"></div>
+  </div>
+
+  <div class="section" id="log-section" style="display:none">
+    <div class="section-header">
+      <h2>Confirmation Log</h2>
+    </div>
+    <p style="color:#aaa; font-size:11px; font-weight:300; letter-spacing:0.03em; margin-bottom:18px;">
+      Every action is cryptographically signed — the signature proves who submitted it and when.
+    </p>
+    <div id="log-entries"></div>
+  </div>
+
+  <div class="section" id="loading-section">
+    <p style="color:#aaa; font-size:12px; font-weight:300;">
+      <span class="spinner"></span> Loading contract from network...
+    </p>
+  </div>
+
+</div>
+
+<script>
+// No remote relay — localStorage sync only (see lawyer.html for explanation).
+// Both tabs must be in the same browser for this to work locally.
+const gun = Gun();
+const GUN_USER = gun.user();
+
+const params = new URLSearchParams(window.location.search);
+const contractId = params.get('contractId');
+
+let currentUser = null;
+let analysisData = null;
+
+function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const statusEl = document.getElementById('login-status');
+
+  if (!username || !password) { statusEl.textContent = 'Enter username and password.'; return; }
+
+  statusEl.innerHTML = '<span class="spinner"></span> Connecting...';
+  document.getElementById('login-btn').disabled = true;
+
+  GUN_USER.auth(username, password, (ack) => {
+    if (ack.err) {
+      GUN_USER.create(username, password, (ack2) => {
+        if (ack2.err) { statusEl.textContent = 'Error: ' + ack2.err; document.getElementById('login-btn').disabled = false; return; }
+        GUN_USER.auth(username, password, (ack3) => {
+          if (ack3.err) { statusEl.textContent = 'Error: ' + ack3.err; document.getElementById('login-btn').disabled = false; return; }
+          onLoggedIn(username);
+        });
+      });
+    } else {
+      onLoggedIn(username);
+    }
+  });
+}
+
+function onLoggedIn(username) {
+  currentUser = username;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  const badge = document.getElementById('user-badge');
+  badge.textContent = username;
+  badge.style.display = 'block';
+
+  if (!contractId) {
+    document.getElementById('loading-section').innerHTML =
+      '<p style="color:#c0392b; font-size:12px; font-weight:300;">No contract ID in the URL. Ask the lawyer for the correct link.</p>';
+    return;
+  }
+
+  loadContractFromGun();
+}
+
+function loadContractFromGun() {
+  gun.get('bull-contracts').get(contractId).once((data) => {
+    if (!data || !data.analysis) {
+      setTimeout(loadContractFromGun, 2000);
+      return;
+    }
+
+    analysisData = JSON.parse(data.analysis);
+    renderDashboard(analysisData, data.lawyerPubKey);
+    listenForUpdates();
+  });
+}
+
+function renderDashboard(data, lawyerPubKey) {
+  document.getElementById('loading-section').style.display = 'none';
+  document.getElementById('summary-section').style.display = 'block';
+  document.getElementById('payments-section').style.display = 'block';
+  document.getElementById('terms-section').style.display = 'block';
+  document.getElementById('log-section').style.display = 'block';
+
+  document.getElementById('contract-summary').textContent = data.contract_summary;
+
+  const payGrid = document.getElementById('payment-cards');
+  payGrid.innerHTML = '';
+  data.payment_schedule.forEach(p => {
+    payGrid.innerHTML += `
+      <div class="card" id="card-${p.id}">
+        <div class="card-title">${p.description}</div>
+        <div class="amount">$${p.amount.toLocaleString()}</div>
+        <div class="card-meta">
+          Due: ${p.due_when}<br/>
+          Paid by: <strong>${p.paid_by}</strong><br/>
+          Confirmed by: <strong>${p.confirmed_by}</strong>
+        </div>
+        <span class="badge pending" id="badge-${p.id}">Pending</span>
+        <div class="card-actions" id="actions-${p.id}">
+          <button onclick="submitConfirmation('${p.id}', 'payment', '${p.description}')">
+            Submit Confirmation
+          </button>
+        </div>
+      </div>`;
+  });
+
+  const termGrid = document.getElementById('terms-cards');
+  termGrid.innerHTML = '';
+  data.terms.forEach(t => {
+    termGrid.innerHTML += `
+      <div class="card" id="card-${t.id}">
+        <div class="card-title">${t.description}</div>
+        <div class="card-meta">
+          Deadline: ${t.deadline}<br/>
+          Responsible: <strong>${t.responsible_party}</strong><br/>
+          Verified by: <strong>${t.verified_by}</strong>
+        </div>
+        <span class="badge pending" id="badge-${t.id}">Pending</span>
+        <div class="card-actions" id="actions-${t.id}">
+          <button onclick="submitConfirmation('${t.id}', 'term', '${t.description}')">
+            Mark as Done
+          </button>
+        </div>
+      </div>`;
+  });
+}
+
+async function submitConfirmation(itemId, type, description) {
+  const btn = document.querySelector(`#actions-${itemId} button`);
+  btn.innerHTML = '<span class="spinner"></span> Signing...';
+  btn.disabled = true;
+
+  const confirmation = {
+    itemId:      itemId,
+    type:        type,
+    description: description,
+    submittedBy: currentUser,
+    pubKey:      GUN_USER.is.pub,
+    timestamp:   new Date().toISOString(),
+    status:      'submitted'
+  };
+
+  const signed = await SEA.sign(JSON.stringify(confirmation), GUN_USER._.sea);
+
+  gun.get('bull-contracts').get(contractId).get('confirmations').get(itemId).put({
+    data:      JSON.stringify(confirmation),
+    signature: signed,
+    pubKey:    GUN_USER.is.pub
+  }, (ack) => {
+    if (ack.err) { btn.textContent = 'Error'; btn.disabled = false; return; }
+
+    document.getElementById('badge-' + itemId).className = 'badge submitted';
+    document.getElementById('badge-' + itemId).textContent = 'Submitted — awaiting lawyer';
+    btn.style.display = 'none';
+
+    addLogEntry(confirmation, signed);
+  });
+}
+
+function listenForUpdates() {
+  gun.get('bull-contracts').get(contractId).get('confirmations').map().on((data, key) => {
+    if (!data) return;
+    try {
+      const conf = JSON.parse(data.data);
+      const badge = document.getElementById('badge-' + conf.itemId);
+      if (!badge) return;
+
+      if (conf.status === 'confirmed') {
+        badge.className = 'badge confirmed';
+        badge.textContent = '✓ Confirmed by Lawyer';
+        const actions = document.getElementById('actions-' + conf.itemId);
+        if (actions) actions.style.display = 'none';
+      } else if (conf.status === 'submitted') {
+        badge.className = 'badge submitted';
+        badge.textContent = 'Submitted — awaiting lawyer';
+      }
+    } catch(e) {}
+  });
+}
+
+function addLogEntry(confirmation, signature) {
+  const log = document.getElementById('log-entries');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `
+    <strong style="font-weight:500">${confirmation.submittedBy}</strong>
+    confirmed <em>${confirmation.description}</em><br/>
+    <span style="color:#bbb; font-size:11px;">${confirmation.timestamp}</span>
+    <div class="sig">Sig: ${signature.substring(0, 80)}...</div>
+  `;
+  log.prepend(entry);
+}
+</script>
+
+</body>
+</html>
